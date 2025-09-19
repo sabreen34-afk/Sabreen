@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اختبار القدرات – الجزء الكمي</title>
+  <!-- Google font for Arabic typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- EmailJS library: allows sending email without a backend -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  emailjs.init({ publicKey: 'yQAX0PpICNPp4R5S_' });
+</script>
+
+  <style>
+    /*
+      To allow customisation of the site’s look and feel we use CSS variables.
+      These variables are initialised with sensible defaults but are replaced
+      with a random theme on each page load via JavaScript.  A dark‑mode
+      override is provided by adding the class `dark-mode` to the body.  To
+      add additional themes simply extend the `themes` array defined in the
+      script section below.
+    */
+    :root {
+      --primary-color: #0A2A45;
+      --button-bg: #0A2A45;
+      --button-hover: #08335A;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --timer-color: #b10d0d;
+      --overlay-bg: rgba(255, 255, 255, 0.85);
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', sans-serif;
+      /* The mathematics themed background slides slowly to provide a
+         dynamic but subtle animation. */
+      background: url('background.png') no-repeat center center fixed;
+      background-size: cover;
+      animation: moveBg 60s linear infinite;
+    }
+    .overlay {
+      background-color: var(--overlay-bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+    }
+    .card {
+      background-color: var(--card-bg);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      padding: 20px 30px;
+      max-width: 800px;
+      width: 100%;
+      animation: fadeSlide 0.8s ease-out;
+    }
+    .card h1, .card h2 {
+      margin-top: 0;
+      color: var(--primary-color);
+    }
+    .card p {
+      color: var(--text-color);
+    }
+    .card input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #cccccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .card button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background-color: var(--button-bg);
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .card button:hover {
+      background-color: var(--button-hover);
+    }
+
+    /* Apply smooth transitions to elements that use theme variables so
+       that colour changes occur gradually when the theme switches. */
+    body, .card, .card button, .dark-toggle, .page-header, .header-text {
+      transition: background-color 1s ease, color 1s ease;
+    }
+    .hidden {
+      display: none;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    .question {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eeeeee;
+    }
+    .question p {
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    .options label {
+      display: block;
+      margin-bottom: 6px;
+      cursor: pointer;
+      font-weight: 400;
+      color: var(--text-color);
+    }
+    .options input[type="radio"] {
+      margin-left: 8px;
+    }
+    #timer {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--timer-color);
+    }
+    @media (max-width: 600px) {
+      .card {
+        padding: 15px 20px;
+      }
+      .question p {
+        font-size: 15px;
+      }
+      .card button {
+        font-size: 14px;
+      }
+    }
+    /* Keyframes for animations */
+    @keyframes moveBg {
+      from { background-position: 0 0; }
+      to { background-position: 0 -400px; }
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Header at the top of the page containing the Vision 2030 logo and ministry text */
+    .page-header {
+      /* Position the header spanning the top of the page.  Using
+         justify-content: space-between pushes the Vision 2030 logo to
+         the far left and the ministry text to the far right.  The
+         children themselves remain in logical order (logo, then text).
+         This arrangement satisfies the requirement that the logo be at
+         أقصى اليسار بينما النص في أقصى اليمين. */
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      /* Override global RTL direction for the header so that the
+         logo appears on the left and the text appears on the right. */
+      direction: ltr;
+    }
+    .page-header img {
+      height: 60px;
+      width: auto;
+    }
+    .header-text {
+      /* Align the ministry text to the right and ensure Arabic lines
+         display correctly.  Direction is set to RTL so that the text
+         flows from right to left independent of the overall header
+         direction. */
+      text-align: right;
+      direction: rtl;
+      font-size: 14px;
+      color: var(--primary-color);
+      line-height: 1.3;
+      font-weight: 600;
+    }
+    /* Dark mode toggle */
+    .dark-toggle {
+      /* Floating dark mode toggle: a small circular button
+         anchored to the vertical centre of the page on the right.
+         This prevents it from interfering with the header or the
+         questions.  Adjust position (right or left) as needed by
+         changing the right/left properties below. */
+      position: fixed;
+      top: 50%;
+      right: 15px;
+      transform: translateY(-50%);
+      font-size: 24px;
+      cursor: pointer;
+      background-color: var(--button-bg);
+      color: #ffffff;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      z-index: 110;
+    }
+    .dark-toggle:hover {
+      background-color: var(--button-hover);
+    }
+
+    /* Optional active state for the dark mode toggle when dark mode
+       is enabled.  This adjusts the colour slightly to indicate the
+       current mode. */
+    .dark-toggle.active-dark {
+      background-color: var(--button-hover);
+    }
+    /* Signature displayed at the bottom of every card */
+    .signature {
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--primary-color);
+      font-weight: 600;
+      text-align: center;
+    }
+    /* Dark mode overrides: define new values for CSS variables */
+    body.dark-mode {
+      --overlay-bg: rgba(0, 0, 0, 0.85);
+      --card-bg: #1f1f1f;
+      --primary-color: #80b3ff;
+      --button-bg: #374785;
+      --button-hover: #516dbb;
+      --text-color: #f0f0f0;
+      --timer-color: #ff7575;
+    }
+    /* Invert the logo in dark mode so it remains visible */
+    body.dark-mode .page-header img {
+      filter: invert(1) hue-rotate(180deg);
+    }
+  </style>
+</head>
+<body>
+<div class="overlay">
+  <!-- Page header with logo, ministry information and dark mode toggle -->
+  <div class="page-header">
+    <img src="vision_logo.png" alt="رؤية المملكة 2030" />
+    <div class="header-text">
+      المملكة العربية السعودية<br />
+      وزارة التربية والتعليم<br />
+      إدارة التعليم بمنطقة الرياض<br />
+      ثانوية جهام
+    </div>
+  </div>
+  <!-- Hidden form used only for EmailJS sendForm -->
+<form id="email-form" style="display:none;">
+  <input type="text" name="score" id="email_score" />
+  <input type="text" name="student_class" id="email_class" />
+  <input type="text" name="student_name" id="email_name" />
+  <!-- Optional: only if your template uses {{to_email}} -->
+  <!-- <input type="email" name="to_email" id="email_to" value="your_teacher@domain.com" /> -->
+</form>
+
+  <!-- Dark mode toggle button is absolutely positioned to the top right so it does not disturb the header layout -->
+  <div id="toggle-dark-mode" class="dark-toggle" title="تبديل الوضع الليلي">☾</div>
+  <!-- Start screen: capture student info -->
+  <div id="start-screen" class="card">
+    <h1>اختبار القدرات – الجزء الكمي</h1>
+    <p>يرجى إدخال الاسم الكامل والصف للبدء.</p>
+    <input type="text" id="studentName" placeholder="الاسم الكامل" />
+    <input type="text" id="studentClass" placeholder="الصف" />
+    <button id="startBtn">ابدأ الاختبار</button>
+    <p class="signature">مع تحيات معلمة المادة : صابرين المطرفي</p>
+  </div>
+  <!-- Quiz container: dynamically filled with questions -->
+  <div id="quiz-container" class="card hidden">
+    <div class="header">
+      <span id="studentInfo"></span>
+      <span id="timer">45:00</span>
+    </div>
+    <form id="quiz-form"></form>
+    <button type="submit" id="submitBtn" class="hidden">إنهاء الاختبار</button>
+    <p class="signature">مع تحيات معلمة المادة : صابرين المطرفي</p>
+  </div>
+  <!-- Results screen -->
+  <div id="result-screen" class="card hidden">
+    <h2>نتيجة الاختبار</h2>
+    <p id="score"></p>
+    <ul id="answers-list"></ul>
+    <p class="signature">مع تحيات معلمة المادة : صابرين المطرفي</p>
+  </div>
+  <!-- Admin panel: visible only when "admin=teacher" is present in URL -->
+  <div id="admin-panel" class="card hidden">
+    <h2>لوحة المعلم</h2>
+    <p>تحتوي القائمة أدناه على بيانات الطالبات اللواتي أكملن الاختبار. يمكنك أيضاً تحميل ملف CSV للاحتفاظ بالنتائج.</p>
+    <div id="results-container"></div>
+    <button id="downloadResults">تحميل النتائج</button>
+    <p class="signature">مع تحيات معلمة المادة : صابرين المطرفي</p>
+  </div>
+</div>
+<script>
+// Wait for the DOM to be ready before running scripts
+document.addEventListener('DOMContentLoaded', function() {
+  const startScreen = document.getElementById('start-screen');
+  const quizContainer = document.getElementById('quiz-container');
+  const resultScreen = document.getElementById('result-screen');
+  const studentInfoSpan = document.getElementById('studentInfo');
+  const timerSpan = document.getElementById('timer');
+  const quizForm = document.getElementById('quiz-form');
+  const submitBtn = document.getElementById('submitBtn');
+  const adminPanel = document.getElementById('admin-panel');
+  const downloadBtn = document.getElementById('downloadResults');
+  const darkToggle = document.getElementById('toggle-dark-mode');
+
+  // Track current exam info
+  let currentQuestions = [];
+  let currentName = '';
+  let currentClass = '';
+  let timerInterval;
+  let timeRemaining;
+  let cheatCount = 0;
+  // Track whether the quiz ended because of a cheating attempt
+  let endedByCheat = false;
+  // Flag used to ignore cheat detection when toggling dark mode
+  let inDarkToggle = false;
+
+  /*
+    Random theme selection: define a list of theme objects where each key
+    corresponds to one of the CSS variables defined in :root. On every
+    page load, one of these themes is selected and applied. If dark mode
+    is later enabled, these variables are overridden by the dark mode
+    definitions in CSS.  Feel free to add additional themes here.
+  */
+  const themes = [
+    {
+      '--primary-color': '#0A2A45',
+      '--button-bg':    '#0A2A45',
+      '--button-hover': '#08335A',
+      '--card-bg':      '#ffffff',
+      '--text-color':   '#333333',
+      '--timer-color':  '#b10d0d'
+    },
+    {
+      '--primary-color': '#00695C',
+      '--button-bg':    '#00695C',
+      '--button-hover': '#004d40',
+      '--card-bg':      '#ffffff',
+      '--text-color':   '#333333',
+      '--timer-color':  '#b10d0d'
+    },
+    {
+      '--primary-color': '#5A0C90',
+      '--button-bg':    '#5A0C90',
+      '--button-hover': '#7e2db3',
+      '--card-bg':      '#ffffff',
+      '--text-color':   '#333333',
+      '--timer-color':  '#b10d0d'
+    },
+    // A bright coral theme for more vibrancy
+    {
+      '--primary-color': '#D84315',
+      '--button-bg':    '#E64A19',
+      '--button-hover': '#BF360C',
+      '--card-bg':      '#ffffff',
+      '--text-color':   '#333333',
+      '--timer-color':  '#c62828'
+    },
+    // A fresh lime theme
+    {
+      '--primary-color': '#558B2F',
+      '--button-bg':    '#689F38',
+      '--button-hover': '#33691E',
+      '--card-bg':      '#ffffff',
+      '--text-color':   '#333333',
+      '--timer-color':  '#b10d0d'
+    },
+    // A playful pink and teal theme
+    {
+      '--primary-color': '#C2185B',
+      '--button-bg':    '#E91E63',
+      '--button-hover': '#AD1457',
+      '--card-bg':      '#ffffff',
+      '--text-color':   '#333333',
+      '--timer-color':  '#b10d0d'
+    }
+  ];
+  // Apply a random theme on load
+  let themeIndex = Math.floor(Math.random() * themes.length);
+  function applyTheme(index) {
+    const selected = themes[index];
+    for (const key in selected) {
+      document.documentElement.style.setProperty(key, selected[key]);
+    }
+  }
+  applyTheme(themeIndex);
+  // Cycle through themes gradually within the same session. Every
+  // 30 seconds the theme will switch to the next one in the list,
+  // wrapping around at the end. This provides a dynamic, lively
+  // appearance. The CSS transitions defined above ensure the
+  // colours change smoothly.
+  setInterval(() => {
+    themeIndex = (themeIndex + 1) % themes.length;
+    applyTheme(themeIndex);
+  }, 30000);
+
+  // Initialise EmailJS with the provided public key.  The user supplied
+  // "yQAX0PpICNPp4R5S_" as the EmailJS public key, so we use it here.
+  if (typeof emailjs !== 'undefined') {
+    emailjs.init('yQAX0PpICNPp4R5S_');
+  }
+
+  // Dark mode toggle event: toggles the dark-mode class on the body
+  darkToggle.addEventListener('click', function() {
+    // When toggling dark mode, temporarily suppress cheat detection.
+    inDarkToggle = true;
+    document.body.classList.toggle('dark-mode');
+    // Toggle an active style on the button to indicate state (optional)
+    darkToggle.classList.toggle('active-dark');
+    // After a short delay, re-enable cheat detection
+    setTimeout(() => { inDarkToggle = false; }, 600);
+  });
+
+  // Check if teacher mode via URL parameter
+  const params = new URLSearchParams(window.location.search);
+  const isAdmin = params.get('admin') === 'teacher';
+  if (isAdmin) {
+    // Show admin panel and hide student-facing screens
+    adminPanel.classList.remove('hidden');
+    startScreen.classList.add('hidden');
+    quizContainer.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    // Display any stored results in a table for the teacher
+    const resultsContainer = document.getElementById('results-container');
+    const storedResults = localStorage.getItem('quantResults');
+    let resultsList;
+    try {
+      resultsList = storedResults ? JSON.parse(storedResults) : [];
+    } catch (e) {
+      resultsList = [];
+    }
+    if (resultsList.length === 0) {
+      resultsContainer.textContent = 'لا توجد بيانات درجات محفوظة حتى الآن.';
+    } else {
+      const table = document.createElement('table');
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      // Header row
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      ['الاسم', 'الصف', 'الدرجة', 'إجمالي الأسئلة', 'التاريخ'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        th.style.borderBottom = '1px solid #ccc';
+        th.style.padding = '8px';
+        th.style.textAlign = 'right';
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      // Body rows
+      const tbody = document.createElement('tbody');
+      resultsList.forEach(rec => {
+        const tr = document.createElement('tr');
+        [rec.name, rec.class, rec.score, rec.total, new Date(rec.date).toLocaleString('ar-SA')].forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          td.style.padding = '6px';
+          td.style.borderBottom = '1px solid #eee';
+          td.style.textAlign = 'right';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      resultsContainer.appendChild(table);
+    }
+  }
+
+  // Timer and cheat variables are declared outside functions so they can
+  // be accessed from both startQuiz and cheatAttempt
+
+  // Define the questions for the quantitative aptitude test.  Each entry
+  // includes the question text, four possible answers, and the index
+  // (0-based) of the correct answer.  Questions cover algebra,
+  // arithmetic, geometry and reasoning.
+  const questions = [
+    { q: 'حل المعادلة: 2x + 3 = 11.', opts: ['4', '5', '3', '6'], ans: 0 },
+    { q: 'إذا كانت مساحة مستطيل طول ضلعيه 8 و5 فما محيطه؟', opts: ['26', '40', '13', '8'], ans: 0 },
+    { q: 'قيمة الجذر التربيعي لـ 64؟', opts: ['8', '6', '7', '9'], ans: 0 },
+    { q: 'إذا كان متوسط أربعة أعداد هو 10 وكان مجموع ثلاثة منها يساوي 27 فما العدد الرابع؟', opts: ['3', '10', '13', '15'], ans: 2 },
+    { q: 'ما أكبر عدد يمكن تكوينه من الأرقام 5،4،3؟', opts: ['543', '534', '453', '435'], ans: 0 },
+    { q: 'إذا كان زيد يسير بسرعة 60 كم/ساعة لمدة 2.5 ساعات، فما المسافة التي يقطعها؟', opts: ['100', '120', '150', '180'], ans: 2 },
+    { q: 'ناتج 7 × 6 ÷ 3 + 5 = ؟', opts: ['19', '17', '18', '21'], ans: 0 },
+    { q: 'إذا كانت كتلة صندوق 5 كجم وسحبنا منه 2 كجم فكم بقي؟', opts: ['3', '4', '5', '7'], ans: 0 },
+    { q: 'إذا كان ثمن 5 دفاتر هو 25 ريالا، فما ثمن 9 دفاتر؟', opts: ['40', '45', '50', '60'], ans: 1 },
+    { q: 'مساحة الدائرة ذات نصف قطر 3؟', opts: ['9π', '6π', '3π', '12π'], ans: 0 },
+    { q: 'إذا كان الراتب الشهري لشخص 4000 وزاد بنسبة 10% فما الراتب الجديد؟', opts: ['4400', '4200', '4100', '4500'], ans: 0 },
+    { q: 'ما العدد الذي إذا ضرب في نفسه يعطي 49؟', opts: ['7', '6', '14', '9'], ans: 0 },
+    { q: 'في متوازي أضلاع طول القاعدة 10 سم والارتفاع 4 سم، فما المساحة؟', opts: ['40', '20', '10', '14'], ans: 0 },
+    { q: 'إذا اشترى شخص سلعة بـ 80 ريالاً وباعها بـ 100 ريال، فكم نسبة الربح؟', opts: ['20%', '25%', '18%', '30%'], ans: 1 },
+    { q: 'يعبر 12 طالباً في صف عن نسبة حضور 60%. كم عدد الطلاب في الصف؟', opts: ['12', '15', '18', '20'], ans: 3 },
+    { q: 'إذا كان لدينا مثلث متساوي الأضلاع طول ضلعه 6 سم، فما محيطه؟', opts: ['18', '12', '6', '16'], ans: 0 },
+    { q: 'ما العدد التالي في السلسلة: 2، 4، 8، 16، ...؟', opts: ['24', '30', '32', '18'], ans: 2 },
+    { q: 'إذا وفر شخص 25% من راتبه 3000 ريال شهرياً، فما مقدار التوفير؟', opts: ['750', '600', '500', '700'], ans: 0 },
+    { q: 'ما ناتج مربع العدد 5 ناقص مربع العدد 3؟', opts: ['16', '25', '9', '4'], ans: 0 },
+    { q: 'ما العدد الأولي من بين الخيارات التالية؟', opts: ['9', '15', '17', '21'], ans: 2 },
+    { q: 'كم قياس الزاوية في مثلث متساوي الأضلاع؟', opts: ['45', '60', '90', '120'], ans: 1 },
+    { q: 'إذا كان x + y = 10 و x - y = 4، فما قيمة x؟', opts: ['7', '5', '6', '4'], ans: 0 },
+    { q: 'معدل سرعة طائرة تقطع 900 كم في ساعتين؟', opts: ['450', '300', '600', '350'], ans: 0 },
+    { q: 'إذا كان هناك 3 صناديق يحتوي كل صندوق على 5 كرات، فكم عدد الكرات كلها؟', opts: ['15', '8', '10', '20'], ans: 0 },
+    { q: 'ثمن قميصين 90 ريال. فكم ثمن أربعة قمصان؟', opts: ['180', '135', '90', '120'], ans: 0 },
+    { q: 'نصف العدد 14 يساوي؟', opts: ['7', '8', '9', '6'], ans: 0 },
+    { q: 'إذا كانت الزاويتان في مثلث 30 و 60، فما الزاوية الثالثة؟', opts: ['90', '80', '100', '70'], ans: 0 },
+    { q: 'إذا كان حاصل ضرب عددين يساوي 24 وأحدهما 4، فما العدد الآخر؟', opts: ['6', '8', '5', '4'], ans: 0 },
+    { q: 'جد المتوسط الحسابي للأعداد 6 و8 و10.', opts: ['8', '7', '9', '6'], ans: 0 },
+    { q: 'إذا اشتريت 3 كعكات بسعر 18 ريال، فكم سعر الكعكة الواحدة؟', opts: ['6', '9', '3', '18'], ans: 0 },
+    { q: 'ما هو المضاعف المشترك الأصغر للعددين 4 و6؟', opts: ['12', '8', '6', '24'], ans: 0 },
+    { q: 'أي الأعداد التالية مربع كامل؟', opts: ['20', '25', '30', '35'], ans: 1 },
+    { q: 'مجموع الأعداد من 1 إلى 5؟', opts: ['15', '10', '20', '5'], ans: 0 },
+    { q: 'في الساعة التناظرية، كم عدد الدقائق في نصف ساعة؟', opts: ['30', '45', '20', '60'], ans: 0 },
+    { q: 'إذا كانت النسبة بين عددين 2:3 وكان مجموعهما 20، فما العددان؟', opts: ['8 و12', '4 و6', '10 و15', '12 و18'], ans: 0 },
+    { q: 'أي من الآتي يصف العدد الأولي؟', opts: ['لا يقبل القسمة إلا على نفسه و1', 'يقبل القسمة على 2 فقط', 'يقبل القسمة على نفسه وعلى 2', 'يقبل القسمة على نفسه وعلى 10'], ans: 0 },
+    { q: 'إذا كانت لدينا دائرة نصف قطرها 4 سم، فما محيط الدائرة؟', opts: ['8π', '12π', '16π', '6π'], ans: 0 },
+    { q: 'ما قيمة 3×(4 + 5)؟', opts: ['27', '12', '24', '18'], ans: 0 },
+    { q: 'إذا كان ثمن قلم ودفتر 15 ريال وثمن الدفتر 10 ريال، فما ثمن القلم؟', opts: ['5', '10', '15', '20'], ans: 0 },
+    { q: 'كم لتر في 2000 مل؟', opts: ['2', '1', '0.2', '20'], ans: 0 },
+    { q: 'إذا كان لديك 12 تفاحة وأعطيت صديقتك ثلثها، كم تفاحة تبقى؟', opts: ['8', '4', '6', '9'], ans: 0 },
+    { q: 'إذا اشترى شخص جهازًا بخصم 20% وكان سعره الأصلي 2500 ريال، فما سعره بعد الخصم؟', opts: ['2000', '2250', '2400', '2450'], ans: 0 },
+    { q: 'عدد الأيام في 8 أسابيع هو؟', opts: ['56', '48', '64', '54'], ans: 0 },
+    { q: 'إذا كان لديك زاوية 90 درجة وأردت تقسيمها بالتساوي إلى ثلاثة أجزاء، فما قياس كل جزء؟', opts: ['30', '20', '45', '60'], ans: 0 },
+    { q: 'ما العدد العشري الذي يعادل الكسر 1/2؟', opts: ['0.5', '2', '1.5', '0.2'], ans: 0 },
+    { q: 'إذا كانت الشركة توظف 5 موظفين كل سنة، فكم موظفًا توظف في 4 سنوات؟', opts: ['20', '10', '15', '25'], ans: 0 },
+    { q: 'ماذا يساوي الجذر التربيعي للعدد 81؟', opts: ['9', '8', '7', '6'], ans: 0 },
+    { q: 'إذا كان محيط مربع 20 سم، فما طول ضلعه؟', opts: ['5', '10', '4', '6'], ans: 0 },
+    { q: 'كم ناتج طرح 100 من 250؟', opts: ['150', '140', '160', '130'], ans: 0 },
+    { q: 'إذا كان لديك 3/4 من كعكة وأكلت نصفها، فما الكمية المتبقية؟', opts: ['3/8', '1/2', '1/4', '3/4'], ans: 0 },
+    { q: 'قيمة 5 × 0 تساوي؟', opts: ['0', '5', '10', '1'], ans: 0 },
+    { q: 'ما العدد الأكبر بين: -3، 0، 4، -1؟', opts: ['4', '0', '-3', '-1'], ans: 0 },
+    { q: 'ما العدد الذي إذا أضيف إليه 9 يعطي 20؟', opts: ['11', '9', '20', '10'], ans: 0 },
+    { q: 'كم عدد الشهور في ربع السنة؟', opts: ['3', '4', '6', '12'], ans: 0 },
+    { q: 'في المتتالية 5، 10، 15، … ما هو المصطلح الرابع؟', opts: ['20', '25', '30', '35'], ans: 0 },
+    { q: 'إذا كان سعر كيلو التفاح 6 ريال، فما سعر 2.5 كيلو؟', opts: ['15', '12', '10', '16'], ans: 0 },
+    { q: 'كم تساوي نسبة 50 إلى 200؟', opts: ['25%', '30%', '20%', '40%'], ans: 0 },
+    { q: 'ما العدد التالي في السلسلة: 1، 1، 2، 3، 5، …؟', opts: ['8', '7', '6', '9'], ans: 0 },
+    { q: 'إذا كان لدينا مستطيل مساحته 48 سم² وطول أحد أضلاعه 6 سم، فما طول الضلع الآخر؟', opts: ['8', '10', '6', '12'], ans: 0 },
+    { q: 'أي مما يلي هو عامل للعدد 24؟', opts: ['7', '5', '4', '9'], ans: 2 },
+    { q: 'ما حاصل جمع 15 و27؟', opts: ['42', '40', '41', '35'], ans: 0 },
+    { q: 'إذا كان ثلث عدد يساوي 9، فما العدد؟', opts: ['27', '18', '9', '24'], ans: 0 },
+    { q: 'ناتج 8 × 4 ÷ 2 = ؟', opts: ['16', '12', '20', '10'], ans: 0 },
+    { q: 'ما قيمة المليون مقسوم على 1000؟', opts: ['1000', '100', '10', '10000'], ans: 0 },
+    { q: 'ارتفاع مثلث قائم 5 وقاعدته 4، ما مساحته؟', opts: ['10', '20', '8', '12'], ans: 0 },
+    { q: 'إذا كان سعر سلعة 120 ريال وحصلت على خصم 25%، ما السعر بعد الخصم؟', opts: ['90', '100', '95', '110'], ans: 0 },
+    { q: 'كم عدد الدقائق في ساعة ونصف؟', opts: ['90', '60', '120', '75'], ans: 0 },
+    { q: 'ما محيط دائرة نصف قطرها 5؟', opts: ['10π', '5π', '20π', '25π'], ans: 0 },
+    { q: 'إذا كانت 3 كتب تزن 1.5 كجم، فما وزن كتاب واحد؟', opts: ['0.5', '0.3', '0.6', '1.0'], ans: 0 },
+    { q: 'ما العدد 48 مقسوماً على 8؟', opts: ['6', '8', '12', '4'], ans: 0 },
+    { q: 'كم عدد الزوايا في مضلع خماسي؟', opts: ['5', '6', '7', '8'], ans: 0 },
+    { q: 'ما المتوسط الحسابي للأعداد 2 و4 و6 و8؟', opts: ['5', '6', '4', '7'], ans: 0 },
+    { q: 'إذا كان 70% من عدد ما يساوي 21، فما العدد؟', opts: ['30', '25', '35', '28'], ans: 0 },
+    { q: 'كم عدد الأشهر في ثلاث سنوات؟', opts: ['36', '30', '24', '48'], ans: 0 },
+    { q: 'ما هو مكعب العدد 3؟', opts: ['27', '9', '6', '81'], ans: 0 },
+    { q: 'ما هو العدد الزوجي من بين الخيارات التالية: 17، 21، 18، 13؟', opts: ['18', '21', '17', '13'], ans: 0 },
+    { q: 'ما ناتج 9 + 8 × 2؟', opts: ['25', '34', '26', '30'], ans: 0 },
+    { q: 'إذا كانت قيمة x تساوي 4، فما قيمة 3x + 2؟', opts: ['14', '12', '16', '18'], ans: 0 },
+    { q: 'كم تساوي نسبة 1 إلى 4؟', opts: ['25%', '20%', '50%', '75%'], ans: 0 },
+    { q: 'ما الجذر التربيعي للعدد 121؟', opts: ['11', '12', '10', '13'], ans: 0 },
+    { q: 'إذا كان متوسط الدرجات لسبعة طلاب هو 80، فما مجموع درجاتهم؟', opts: ['560', '480', '490', '570'], ans: 0 },
+    { q: 'أي مما يلي هو عامل للعدد 45؟', opts: ['9', '8', '12', '7'], ans: 0 },
+    { q: 'ما مربع العدد 9؟', opts: ['81', '27', '18', '72'], ans: 0 },
+    { q: 'إذا كان لأحمد 80 ريال وفر نصفها، كم تبقى لديه؟', opts: ['40', '20', '60', '50'], ans: 0 },
+    { q: 'ما قيمة (5 + 2) × (3 - 1)؟', opts: ['14', '12', '16', '10'], ans: 0 },
+    { q: 'إذا كان محيط مثلث 18 سم وطول ضلعين 6 و5 سم، فما طول الضلع الثالث؟', opts: ['7', '8', '6', '5'], ans: 0 },
+    { q: 'ما ناتج طرح 3 من -2؟', opts: ['-5', '-1', '1', '5'], ans: 0 },
+    { q: 'كم عدد الدقائق في ثلث الساعة؟', opts: ['20', '30', '15', '45'], ans: 0 },
+    { q: 'إذا اشتريت 12 قلمًا بـ24 ريال، فما سعر 5 أقلام؟', opts: ['10', '8', '6', '12'], ans: 0 },
+    { q: 'ما العدد الذي إذا ضرب في 6 يعطي 54؟', opts: ['9', '8', '7', '6'], ans: 0 },
+    { q: 'إذا كان طول ضلع المربع 9 سم، فما مساحته؟', opts: ['81', '27', '18', '72'], ans: 0 },
+    { q: 'كم مجموع زوايا المثلث؟', opts: ['180 درجة', '360 درجة', '90 درجة', '270 درجة'], ans: 0 },
+    { q: 'ما العدد الذي يقع بين 8 و12؟', opts: ['10', '9', '11', '13'], ans: 0 },
+    { q: 'إذا كان لديك 10 لترات من الماء واستخدمت 3 لترات، كم يتبقى؟', opts: ['7', '3', '6', '5'], ans: 0 },
+    { q: 'ما قيمة 50% من 80؟', opts: ['40', '30', '50', '60'], ans: 0 },
+    { q: 'ما العدد الذي إذا قسم على 5 يعطي 6؟', opts: ['30', '25', '35', '20'], ans: 0 },
+    { q: 'إذا كان لدينا متوازي أضلاع طول قاعدته 7 وارتفاعه 3، فما مساحته؟', opts: ['21', '10', '18', '28'], ans: 0 },
+    { q: 'كم عدد الأرجل لأربع قطط؟', opts: ['16', '12', '8', '14'], ans: 0 },
+    { q: 'ما العدد الذي إذا ضرب في نفسه يعطي 16؟', opts: ['4', '8', '2', '5'], ans: 0 },
+    { q: 'إذا كان لأحمد 3 إبل ولكل واحدة 4 أرجل، كم عدد الأرجل؟', opts: ['12', '10', '15', '8'], ans: 0 },
+    { q: 'كم عدد المربعات في لوحة شطرنج 8×8؟', opts: ['64', '32', '16', '48'], ans: 0 },
+    { q: 'إذا كان الوقت الآن الساعة 3:00 بعد الظهر، فما الساعة بعد 4 ساعات؟', opts: ['7:00 مساءً', '8:00 مساءً', '6:00 مساءً', '4:00 مساءً'], ans: 0 },
+    { q: 'إذا كان لدينا 5 فصول وكل فصل فيه 6 طلاب، كم مجموع الطلاب؟', opts: ['30', '25', '35', '40'], ans: 0 },
+    { q: 'ما ناتج 18 ÷ (3 × 2)؟', opts: ['3', '4', '9', '6'], ans: 0 },
+    { q: 'ما العدد التالي بعد 0.75؟', opts: ['0.8', '0.7', '0.5', '0.9'], ans: 0 },
+    { q: 'إذا كان لديك 6 تفاحات وأكلت ربعها، كم تبقى؟', opts: ['4.5', '3', '2', '4'], ans: 0 },
+    { q: 'ما مجموع الأعداد الفردية من 1 إلى 9؟', opts: ['25', '20', '45', '30'], ans: 0 },
+    { q: 'كم عدد الدقائق في 2.75 ساعة؟', opts: ['165', '180', '200', '150'], ans: 0 },
+    { q: 'إذا اشتريت 4 تذاكر بسعر 8 ريالات لكل واحدة، كم تدفع؟', opts: ['32', '30', '24', '28'], ans: 0 },
+    { q: 'ما العدد الأصغر من بين: 0.3، 0.04، 0.09، 0.2؟', opts: ['0.04', '0.3', '0.09', '0.2'], ans: 0 },
+    { q: 'كم تساوي الزاوية المستقيمة؟', opts: ['180 درجة', '90 درجة', '360 درجة', '0 درجة'], ans: 0 },
+    { q: 'إذا كانت لدينا 24 قطعة حلوى نقسمها بين 6 أطفال بالتساوي، كم قطعة لكل طفل؟', opts: ['4', '5', '3', '6'], ans: 0 },
+    { q: 'ما حاصل جمع أول خمسة أعداد فردية؟', opts: ['25', '15', '9', '20'], ans: 0 },
+    { q: 'إذا بدأت الساعة في 14:00 وانتهت في 17:30، كم مدة الوقت؟', opts: ['3 ساعات ونصف', '2 ساعات', '4 ساعات ونصف', '3 ساعات'], ans: 0 },
+    { q: 'ما العدد الذي إذا أضفت له 0.5 يعطي 1.2؟', opts: ['0.7', '0.6', '0.5', '0.8'], ans: 0 },
+    { q: 'إذا كانت المسافة بين مدينتين 200 كم وتقطعها السيارة خلال ساعتين، فما السرعة؟', opts: ['100 كم/ساعة', '80 كم/ساعة', '90 كم/ساعة', '70 كم/ساعة'], ans: 0 },
+    { q: 'ما العدد الذي إذا ضرب في 5 ثم طرح 10 يعطي 15؟', opts: ['5', '4', '3', '6'], ans: 0 },
+    { q: 'كم عدد الأسابيع في نصف سنة؟', opts: ['26', '24', '25', '20'], ans: 0 },
+    { q: 'ما ناتج 9 - (-3)؟', opts: ['12', '6', '-12', '-6'], ans: 0 },
+    { q: 'إذا كان مجموع عددين 30 وأحدهما 18، فما العدد الآخر؟', opts: ['12', '10', '16', '14'], ans: 0 },
+    { q: 'إذا كان لدينا 8 كرات نصفها حمراء، كم عدد الكرات الحمراء؟', opts: ['4', '2', '6', '8'], ans: 0 }
+  ];
+
+  // Shuffle utility: randomises elements in an array in place
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  // Shuffle options within a question and adjust answer index accordingly
+  function shuffleOptions(q) {
+    const combined = q.opts.map((opt, idx) => ({ opt: opt, idx: idx }));
+    shuffleArray(combined);
+    q.opts = combined.map(item => item.opt);
+    q.ans = combined.findIndex(item => item.idx === q.ans);
+  }
+
+  // Check if all questions have been answered; if so enable the submit button
+  function checkCompletion() {
+    // Only run during an active quiz
+    if (quizContainer.classList.contains('hidden')) return;
+    const formData = new FormData(quizForm);
+    let allAnswered = true;
+    for (let i = 0; i < currentQuestions.length; i++) {
+      if (!formData.has('q' + i)) {
+        allAnswered = false;
+        break;
+      }
+    }
+    submitBtn.disabled = !allAnswered;
+  }
+
+  // Start the exam: validate input, shuffle questions, build form and start timer
+  function startQuiz() {
+    const nameInput = document.getElementById('studentName').value.trim();
+    const classInput = document.getElementById('studentClass').value.trim();
+    if (!nameInput || !classInput) {
+      alert('يرجى إدخال الاسم الكامل والصف.');
+      return;
+    }
+    // Prevent students from retaking the exam on the same device. We
+    // inspect the stored results and compare the name and class to
+    // existing entries. If a match is found, inform the student and
+    // stop the quiz from starting.  Note: this protection applies only
+    // on the current device and browser due to the use of localStorage.
+    try {
+      const previous = localStorage.getItem('quantResults');
+      if (previous) {
+        const previousArr = JSON.parse(previous);
+        const found = previousArr.some(rec => rec.name === nameInput && rec.class === classInput);
+        if (found) {
+          alert('لقد قمتِ بأداء هذا الاختبار مسبقاً ولا يمكنكِ إعادته مرة أخرى.');
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore parse errors and allow exam if local storage cannot be read
+    }
+    // Record current student info
+    currentName = nameInput;
+    currentClass = classInput;
+    // Reset the cheat flag for this attempt
+    endedByCheat = false;
+    // Hide start screen and show quiz container
+    startScreen.classList.add('hidden');
+    quizContainer.classList.remove('hidden');
+    studentInfoSpan.textContent = nameInput + ' – الصف: ' + classInput;
+    // Remove duplicate questions based on their text to ensure no repeated questions
+    const seenTexts = new Set();
+    const deduped = [];
+    questions.forEach(item => {
+      if (!seenTexts.has(item.q)) {
+        deduped.push(item);
+        seenTexts.add(item.q);
+      }
+    });
+    // Shuffle the deduplicated pool so that each test selects a unique subset
+    shuffleArray(deduped);
+    // Select 30 questions for this session
+    currentQuestions = deduped.slice(0, 30).map(q => {
+      // Deep copy to avoid mutating original questions during option shuffling
+      return { q: q.q, opts: q.opts.slice(), ans: q.ans };
+    });
+    // Shuffle options within selected questions
+    currentQuestions.forEach(shuffleOptions);
+    // Build questions form
+    quizForm.innerHTML = '';
+    currentQuestions.forEach((q, idx) => {
+      const qDiv = document.createElement('div');
+      qDiv.className = 'question';
+      const p = document.createElement('p');
+      p.textContent = (idx + 1) + '. ' + q.q;
+      qDiv.appendChild(p);
+      const optionsDiv = document.createElement('div');
+      optionsDiv.className = 'options';
+      q.opts.forEach((opt, optIdx) => {
+        const label = document.createElement('label');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'q' + idx;
+        radio.value = optIdx;
+        const id = 'q' + idx + '_opt' + optIdx;
+        radio.id = id;
+        label.appendChild(radio);
+        const span = document.createElement('span');
+        span.textContent = opt;
+        label.appendChild(span);
+        optionsDiv.appendChild(label);
+      });
+      qDiv.appendChild(optionsDiv);
+      quizForm.appendChild(qDiv);
+    });
+    // Show submit button and disable it until all questions are answered
+    submitBtn.classList.remove('hidden');
+    submitBtn.disabled = true;
+    // Set up completion checking on option changes
+    Array.from(quizForm.querySelectorAll('input[type="radio"]')).forEach(radio => {
+      radio.addEventListener('change', checkCompletion);
+    });
+    checkCompletion();
+    // Initialise timer to 45 minutes
+    timeRemaining = 45 * 60;
+    timerSpan.textContent = '45:00';
+    timerInterval = setInterval(() => {
+      timeRemaining--;
+      if (timeRemaining <= 0) {
+        finishQuiz();
+      }
+      const minutes = String(Math.floor(timeRemaining / 60)).padStart(2, '0');
+      const seconds = String(timeRemaining % 60).padStart(2, '0');
+      timerSpan.textContent = minutes + ':' + seconds;
+    }, 1000);
+  }
+
+  // Evaluate answers and show results
+let emailInFlight = false; // guard against double submit
+
+function finishQuiz() {
+  if (emailInFlight) return;
+  clearInterval(timerInterval);
+
+  // Compute score using the selected questions only
+  let score = 0;
+  const formData = new FormData(quizForm);
+  currentQuestions.forEach((q, idx) => {
+    const selected = formData.get('q' + idx);
+    if (selected !== null && parseInt(selected, 10) === q.ans) {
+      score++;
+    }
+  });
+
+  // Persist result to local storage for teacher review
+  const stored = localStorage.getItem('quantResults');
+  let resultsArr;
+  try { resultsArr = stored ? JSON.parse(stored) : []; }
+  catch (e) { resultsArr = []; }
+
+  // Include cheating note if applicable
+  const scoreString = endedByCheat ? `${score} (انتهى بسبب الغش)` : `${score}`;
+
+  // Fill hidden EmailJS form fields (names must match template vars)
+  const f = document.getElementById('email-form');
+  f.querySelector('#email_score').value  = scoreString;   // name="score"
+  f.querySelector('#email_class').value  = currentClass;  // name="student_class"
+  f.querySelector('#email_name').value   = currentName;   // name="student_name"
+
+  // Save locally before attempting email (so nothing is lost)
+  resultsArr.push({
+    name: currentName,
+    class: currentClass,
+    score: scoreString,
+    total: currentQuestions.length,
+    date: new Date().toISOString()
+  });
+  localStorage.setItem('quantResults', JSON.stringify(resultsArr));
+
+  // Send result via EmailJS using sendForm (the correct API for forms)
+  emailInFlight = true;
+  const serviceID  = 'service_mlx3vc6';   // or 'default_service' if that's your default
+  const templateID = 'template_itvehlf';
+
+  emailjs.sendForm(serviceID, templateID, '#email-form')
+    .then(function() {
+      // Optional student notice
+      // alert('تم إرسال نتيجتك إلى المعلم بنجاح.');
+      console.log('EmailJS: message sent successfully');
+      emailInFlight = false;
+    })
+    .catch(function(error) {
+      console.error('EmailJS error:', error);
+      // Optional gentle note to student; answers are already saved
+      // alert('تعذر إرسال النتيجة إلى المعلم. سيتم إبلاغ المعلمة لاحقًا.');
+      emailInFlight = false;
+    });
+
+  // Show thank-you screen (no score/details for student)
+  quizContainer.classList.add('hidden');
+  resultScreen.classList.remove('hidden');
+  document.getElementById('score').textContent =
+    'شكراً لإكمال الاختبار. سيتم تقييم إجاباتك من قبل الأستاذة : صابرين.';
+  document.getElementById('answers-list').innerHTML = '';
+}
+
+  // Start button event
+  document.getElementById('startBtn').addEventListener('click', startQuiz);
+  // Form submit event (explicit finish)
+  quizForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    finishQuiz();
+  });
+  // When the submit button is clicked, trigger form submission to finish the quiz.
+  submitBtn.addEventListener('click', function() {
+    if (!submitBtn.disabled) {
+      quizForm.requestSubmit();
+    }
+  });
+
+  // Prevent context menu and clipboard actions to deter cheating
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
+  ['copy', 'cut', 'paste'].forEach(eventType => {
+    document.addEventListener(eventType, function(e) {
+      e.preventDefault();
+    });
+  });
+  // Block developer tools and repeated cheat attempts
+  document.addEventListener('keydown', function(e) {
+    const prohibited = (e.key === 'F12') || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'));
+    if (prohibited) {
+      e.preventDefault();
+      cheatAttempt();
+    }
+  });
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      cheatAttempt();
+    }
+  });
+  window.addEventListener('blur', function() {
+    cheatAttempt();
+  });
+
+  // Handle cheat attempts: subtract 5 minutes from the timer on each attempt
+  // without automatically ending the exam.  This discourages cheating by
+  // reducing the available time.  We ignore cheat detection before the quiz
+  // has started or after it has finished.
+  function cheatAttempt() {
+    // Skip cheat handling if the quiz hasn't started or has already finished
+    if (quizContainer.classList.contains('hidden') || !resultScreen.classList.contains('hidden')) {
+      return;
+    }
+    // Ignore blur/visibility events triggered by the dark mode toggle
+    if (inDarkToggle) {
+      return;
+    }
+    cheatCount++;
+    // Subtract five minutes (300 seconds) from the remaining time
+    timeRemaining = Math.max(0, timeRemaining - 300);
+    alert('تم رصد محاولة غش! سيتم خصم 5 دقائق من الوقت المتبقي.');
+    // If time has run out after the penalty, end the quiz and mark that it was due to cheating
+    if (timeRemaining <= 0) {
+      endedByCheat = true;
+      finishQuiz();
+    }
+  }
+
+  // Allow teacher to download results as CSV
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', function() {
+      const stored = localStorage.getItem('quantResults');
+      let results;
+      try {
+        results = stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        results = [];
+      }
+      if (!results.length) {
+        alert('لا توجد نتائج محفوظة حتى الآن.');
+        return;
+      }
+      // Construct CSV string
+      let csv = 'الاسم,الصف,الدرجة,إجمالي الأسئلة,التاريخ\n';
+      results.forEach(r => {
+        csv += `${r.name},${r.class},${r.score},${r.total},${r.date}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'results.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+});
+</script>
+</body>
+</html>
