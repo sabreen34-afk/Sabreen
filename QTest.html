@@ -243,6 +243,22 @@
       filter: invert(1) hue-rotate(180deg);
     }
   </style>
+
+<!-- Anti‑Cheat (No‑Copy + Canvas Render) -->
+<style id="anti-cheat-nocopy-css">
+.nocopy, .nocopy * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -ms-user-select: none !important;
+  -moz-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+/* visually hide original text nodes when converted, keep for a11y via aria-label */
+.canvasized[aria-label] { color: transparent !important; }
+.canvasized canvas { display: inline-block; vertical-align: baseline; pointer-events: none; }
+</style>
+
 </head>
 <body>
 <div class="overlay">
@@ -909,5 +925,130 @@ function finishQuiz() {
   }
 });
 </script>
+
+<!-- Anti‑Cheat: JS Guards + Canvas Renderer -->
+<script id="anti-cheat-canvas-js">
+(function(){
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const quizRoot = document.querySelector('#quiz-container') || document.body;
+
+  function markNoCopy(el){
+    if(!el) return;
+    el.classList.add('nocopy');
+    el.setAttribute('draggable','false');
+    el.addEventListener('selectstart', e => e.preventDefault());
+    el.addEventListener('dragstart',  e => e.preventDefault());
+    el.addEventListener('copy', e => e.preventDefault());
+    el.addEventListener('cut',  e => e.preventDefault());
+    el.addEventListener('paste',e => e.preventDefault());
+    el.addEventListener('contextmenu', e => e.preventDefault());
+    if (isTouch) {
+      let t0 = 0;
+      el.addEventListener('touchstart', (e) => { t0 = Date.now(); }, {passive:true});
+      el.addEventListener('touchend', (e) => { if (Date.now()-t0 > 350) e.preventDefault(); }, {passive:false});
+    }
+  }
+
+  // Canvas text renderer: replaces visible text with canvas bitmap (uncopyable), preserves aria-label
+  function canvasize(el, opts){
+    if (!el || el.dataset.canvasized === '1') return;
+    const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    el.dataset.canvasized = '1';
+    el.classList.add('canvasized');
+    el.setAttribute('aria-label', text);
+
+    const style = window.getComputedStyle(el);
+    const fontSize = parseFloat(style.fontSize)||16;
+    const lineHeight = Math.max(parseFloat(style.lineHeight)||Math.round(fontSize*1.4), fontSize*1.2);
+    const fontWeight = style.fontWeight || '400';
+    const fontFamily = style.fontFamily || 'system-ui, sans-serif';
+    const maxWidth = Math.min(el.clientWidth || 600, 700);
+    const paddingX = 2;
+
+    // build lines with simple wrap
+    const canvas = document.createElement('canvas');
+    const dpr = window.devicePixelRatio || 1;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    function measure(t){ return ctx.measureText(t).width; }
+    words.forEach(w => {
+      const test = line ? line + ' ' + w : w;
+      if (measure(test) > maxWidth - paddingX*2 && line) { lines.push(line); line = w; }
+      else { line = test; }
+    });
+    if (line) lines.push(line);
+    const width = Math.ceil(Math.min(maxWidth, Math.max(...lines.map(l => measure(l))) + paddingX*2));
+    const height = Math.ceil(lines.length * lineHeight + 2);
+
+    canvas.width = Math.max(1, Math.floor(width * dpr));
+    canvas.height = Math.max(1, Math.floor(height * dpr));
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+
+    const bg = window.getComputedStyle(document.body).backgroundColor || 'transparent';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,width,height);
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = getComputedStyle(document.body).color || '#e2e8f0';
+    ctx.textBaseline = 'top';
+
+    let y = 0;
+    lines.forEach(ln => {
+      ctx.fillText(ln, paddingX, y);
+      y += lineHeight;
+    });
+
+    // Replace text with canvas, keep radio/button click behavior via pointer-events:none
+    el.textContent = '';
+    el.appendChild(canvas);
+  }
+
+  // Apply canvasization & no-copy to common quiz text
+  function applyGuards(root){
+    markNoCopy(root);
+    const blocks = root.querySelectorAll('p, h1, h2, h3, h4, h5, h6, .question, .q-text, .prompt, .stem');
+    blocks.forEach(el => { markNoCopy(el); canvasize(el); });
+    // inside labels/spans that hold option text
+    const optionTexts = root.querySelectorAll('label span, .options span, .choice span, .choices span');
+    optionTexts.forEach(el => { markNoCopy(el); canvasize(el); });
+  }
+
+  // Initial
+  applyGuards(quizRoot);
+
+  // Re-apply on mutations (dynamic quizzes)
+  const mo = new MutationObserver(muts => {
+    for (const m of muts) {
+      m.addedNodes && m.addedNodes.forEach(node => {
+        if (node.nodeType === 1) {
+          if (quizRoot.contains(node)) applyGuards(node);
+        }
+      });
+    }
+  });
+  mo.observe(quizRoot, {childList:true, subtree:true});
+
+  // Global selection guard limited to quizRoot
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection && window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const anchor = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+    if (anchor && anchor.closest && anchor.closest('#quiz-container')) {
+      try { sel.removeAllRanges(); } catch(_){}
+    }
+  }, {passive:true});
+
+  // Expose a manual hook if your app updates questions programmatically
+  window.AntiCheat = Object.assign(window.AntiCheat || {}, {
+    reapply: () => applyGuards(quizRoot)
+  });
+})();
+</script>
+
 </body>
 </html>
